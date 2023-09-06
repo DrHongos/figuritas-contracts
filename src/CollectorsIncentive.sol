@@ -8,6 +8,14 @@ import { ReentrancyGuard } from "../lib/openzeppelin-contracts/contracts/securit
 import { FiguritasCollection } from "./FiguritasCollection.sol";
 import { AlbumFiguritas } from "./AlbumFiguritas.sol";
 
+/* 
+    Make a fallback fn in order to increase the prizes with external money
+    can be used to create prizes from figus sells
+
+    Put prices in proportion and cancel out the winners (?)
+
+*/
+
 contract CollectorsTop is Ownable, ReentrancyGuard {
     using Counters for Counters.Counter;
 
@@ -26,8 +34,8 @@ contract CollectorsTop is Ownable, ReentrancyGuard {
     event AlbumCompleted(address indexed collector, address indexed album, uint position);
     event IncentiveAdded(address indexed paymentToken, uint[] positions, uint[] amounts);
 
-    constructor(address collection) {
-        _collection = FiguritasCollection(collection);
+    constructor() {
+        _collection = FiguritasCollection(msg.sender);
     }
 
     function addIncentiveERC20(uint[] calldata positions, address paymentToken, uint[] calldata amounts) public {
@@ -60,7 +68,6 @@ contract CollectorsTop is Ownable, ReentrancyGuard {
             IERC20(prizes[currentPosition ].paymentToken).transfer(msg.sender, prizes[currentPosition].amount);
         }
         _currentPosition.increment();    
-        // should block the album? otherwise unstick all, transfer & stick all makes a BUG
         emit AlbumCompleted(msg.sender, albumAddress, currentPosition);
     }        
 

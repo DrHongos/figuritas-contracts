@@ -7,22 +7,31 @@ import { ERC20PresetMinterPauser } from "../lib/openzeppelin-contracts/contracts
 import { AlbumFiguritas } from "../src/AlbumFiguritas.sol";
 import { CollectorsTop } from "../src/CollectorsIncentive.sol";
 import { SobresFactory } from "../src/SobresFactory.sol";
+import { FigusCreator } from "../src/FigusCreator.sol";
+import { TradingPit } from "../src/TradingPit.sol";
 
 contract FiguritasCollectionTest is Test {
     FiguritasCollection public collection;
     SobresFactory public sobres;
     CollectorsTop public top;
-
+    FigusCreator public factory;
     ERC20PresetMinterPauser public paymentToken;
+    TradingPit public tradingPit;
 
     string uri = "fake_uri/";
 
+    address creator;
+    address admin;
     address alice;
     address bob;
 
     uint pricePerUnit = 1 * 10 ** 17;
+    uint fee = 500; // 5 %
+    uint64 subscriptionId = 4963;
 
     function setUp() public {
+        admin = address(69);
+        creator = address(666);
         alice = address(1);
         bob = address(2);
 
@@ -30,6 +39,20 @@ contract FiguritasCollectionTest is Test {
         paymentToken.mint(alice, 1*10**20);
         paymentToken.mint(bob, 1*10**20);
 
+        // launch factory (on admin's name)
+        vm.startPrank(admin);
+        factory = new FigusCreator();
+        tradingPit = new TradingPit();
+
+        factory.setFee(fee);
+        factory.setSubscriptionId(subscriptionId);
+        
+        vm.stopPrank();
+    }
+
+    function configCollection() public {
+        vm.startPrank(creator);
+        // move collection creation to tests
         uint8[] memory densityCurve = new uint8[](6);
         densityCurve[0] = 3;
         densityCurve[1] = 4;
@@ -38,23 +61,28 @@ contract FiguritasCollectionTest is Test {
         densityCurve[4] = 10;        
         densityCurve[5] = 1;
 
-        collection = new FiguritasCollection(
-            uri, 
-//            address(paymentToken), 
-//            pricePerUnit,
-            4963,           // VRF subscription
+        address collectionAddress = factory.createCollection(
+            uri,
             densityCurve
         );
+
+        collection = FiguritasCollection(collectionAddress);
         sobres = collection.sobres();
         top = collection.top();
+        vm.stopPrank();
     }
 
     function configSale() public {
+        vm.startPrank(creator);
         sobres.configSobre(3, 1*10**18, address(paymentToken),type(uint256).max);
         collection.setAlbumPrice(address(paymentToken), 2*10**18);
+        vm.stopPrank();
     }
 
+    function configIncentives() public {}
+
     function test_creation() public {
+        configCollection();
         uint8 test_random_select = collection.densityCurveFigus(4);        
         uint8 test_last = collection.densityCurveFigus(31); 
         assertEq(test_random_select, 1);
@@ -63,9 +91,8 @@ contract FiguritasCollectionTest is Test {
 //        assertEq(address(collection.paymentsToken()), address(paymentToken));
     }
 
-//    function test_config() public {}
-
     function test_my_first_envelope() public {
+        configCollection();
         configSale();
         vm.startPrank(alice);
         paymentToken.approve(address(sobres), 10*10**18); 
@@ -75,6 +102,7 @@ contract FiguritasCollectionTest is Test {
     }
 
     function test_my_first_album() public {
+        configCollection();
         configSale();
         vm.startPrank(alice);
         paymentToken.approve(address(collection), 2*10**18);
@@ -91,7 +119,49 @@ contract FiguritasCollectionTest is Test {
         AlbumFiguritas album = AlbumFiguritas(collection.albums(alice));
         collection.setApprovalForAll(address(album), true);
         album.stickFigus(ids);
-            
+        vm.stopPrank();
+        vm.prank(admin);
+        factory.withdrawProtocol(admin, address(collection));
+        assertGt(paymentToken.balanceOf(admin), 0);
+    }
+
+    function test_tradingPit_first() public {
+        configCollection();
+        configSale();
+        vm.startPrank(alice);
+        paymentToken.approve(address(sobres), 10*10**18); 
+        sobres.buyFigus(alice, 0, 1, 666);
+        sobres.setApprovalForAll(address(collection), true);
+        collection.openEnvelopes(0);
+        // IDS: 1,2, 3 
+        // create offer
+        collection.setApprovalForAll(address(tradingPit), true);
+        TradingPit.Item memory offered = TradingPit.Item (
+            TradingPit.TokenType.ERC1155,
+            address(collection),
+            1                           // id
+        );
+
+        TradingPit.Item memory required = TradingPit.Item (
+            TradingPit.TokenType.ERC1155,
+            address(collection),
+            4                           // id
+        );
+        uint offerId = tradingPit.createOffer(offered, required);
+        vm.stopPrank();
+        
+        vm.startPrank(bob);
+        paymentToken.approve(address(sobres), 10*10**18); 
+        sobres.buyFigus(bob, 0, 1, 999);
+        sobres.setApprovalForAll(address(collection), true);
+        collection.openEnvelopes(1);
+        // IDS: 4, 4, 2
+        collection.setApprovalForAll(address(tradingPit), true);
+        // take the offer
+        tradingPit.takeOffer(offerId);
+        vm.stopPrank();
+        assertEq(collection.balanceOf(alice, 4), 1);
+        assertEq(collection.balanceOf(bob, 1), 1);
     }
 
     // TO BE CONTINUED

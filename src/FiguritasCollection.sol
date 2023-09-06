@@ -14,11 +14,19 @@ contract FiguritasCollection is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard
     uint8[] public densityCurveFigus;   // later private // limits total amount of figus to 256
     uint8 public numberFigus;           // limited to 255
 
+
+    address factory;
+    address creator;
+    uint creatorBalance;
+    uint protocolBalance;
+    uint public fee;
+
     SobresFactory public sobres;    
     CollectorsTop public top;
 
     address _paymentToken;
     uint _albumPrice;
+    uint _protocolAlbumPrice;
 
     mapping(address => address) public albums;
 
@@ -27,19 +35,25 @@ contract FiguritasCollection is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard
     event SobreOpened(address indexed owner, uint id, uint[] ids);
 
     constructor(
+        address _creator,
         string memory uri, 
+        uint _fee,
         uint64 _subscriptionId,
         uint8[] memory _densityCurveFigus
     )
     ERC1155(uri)
     {
+        factory = msg.sender;
+        numberFigus = uint8(_densityCurveFigus.length);
+        fee = _fee;
+        creator = _creator;
+
         sobres = new SobresFactory(
             "sobresFactory", 
             "SOBRE", 
-            msg.sender,             // admin of sobresFactory
+            _creator,             // admin of sobresFactory
             _subscriptionId);
-
-        numberFigus = uint8(_densityCurveFigus.length);
+        top = new CollectorsTop();        
 
         // populate densityCurveFigus        
         densityCurveFigus.push(0);                      // discarded slot (because of normalization of VRF)
@@ -52,10 +66,11 @@ contract FiguritasCollection is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard
         }
     }
 
-    function setAlbumPrice(address paymentToken, uint price) public onlyOwner() {
-//        require(paymentToken == address(0), "Price already set");
+    function setAlbumPrice(address paymentToken, uint price) public {
+        require(msg.sender == creator, "Only creator can set");
         _paymentToken = paymentToken;
-        _albumPrice = price;  
+        _albumPrice = price;
+        _protocolAlbumPrice = fee * price / 10000;
         emit AlbumPriceConfig(paymentToken, price);
     }
 
@@ -63,6 +78,8 @@ contract FiguritasCollection is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard
         require(albums[msg.sender] == address(0), "Already owner of an album");
         if (_albumPrice > 0) {
             IERC20(_paymentToken).transferFrom(msg.sender, address(this), _albumPrice);
+            creatorBalance += _albumPrice - _protocolAlbumPrice;
+            protocolBalance += _protocolAlbumPrice;
         }
         AlbumFiguritas albumCreated = new AlbumFiguritas(msg.sender, address(this));
         address albumCreatedAddress = address(albumCreated);
@@ -71,6 +88,7 @@ contract FiguritasCollection is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard
     }
 
     function openEnvelopes(uint id) public nonReentrant() {
+        require(sobres.ownerOf(id) == msg.sender, "Not owner of sobre");
         (uint amount, uint random) = sobres.getSobreInformation(id);
         
         uint256[] memory ids = new uint256[](amount);
@@ -84,6 +102,18 @@ contract FiguritasCollection is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard
         sobres.burn(id);
         _mintBatch(msg.sender, ids, amounts, "");
         emit SobreOpened(msg.sender, id, ids);
+    }
+
+    function protocolWithdraw(address beneficiary) public onlyOwner() {
+        //require(msg.sender == factory, "Only factory can call");
+        IERC20(_paymentToken).transfer(beneficiary, protocolBalance);
+        protocolBalance = 0;
+    }
+
+    function creatorWithdraw(address beneficiary) public {
+        require(msg.sender == creator, "Only creator can call");
+        IERC20(_paymentToken).transfer(beneficiary, creatorBalance);
+        creatorBalance = 0;
     }
 
     // OVERRIDES

@@ -13,12 +13,16 @@ On creation of FiguritasCollection will receive:
 
 TODO:
 - continue w/TTD
-    - fees & withdraw                   <<<
-        - differentiate sobres (LINK fees related) with albums (only for protocol) 
-    - TradingPit
-        - exchange of figus with multiple conditions
-
+    - All the tests i havent done yet..
     
+    - fees & withdraw                   <<<
+        - sobresFactory 
+            - min fee for sobre (LINK fees related)
+    
+    - TradingPit
+        - multiple conditions
+            (kind of free interpretation of required vs offered)
+            implies a problem storing the multiple Item
 
 second test: https://sepolia.etherscan.io/address/0x7d22603C231a747A99B0Cabab6B2E6EaA7D983Ae
     sobres factory: 0xAA36Cf581373e97794f183882A1C9419F3E32485

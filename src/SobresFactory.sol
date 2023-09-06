@@ -10,6 +10,12 @@ import { ReentrancyGuard } from "../lib/openzeppelin-contracts/contracts/securit
 import { VRFConsumerBaseV2 } from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 
+/* 
+    Add withdraw mechanism
+    Add fee for LINK payment
+        - min fee (necessary)    
+*/
+
 contract SobresFactory is ERC721, ERC721Burnable, Ownable, VRFConsumerBaseV2, ReentrancyGuard {
     using Counters for Counters.Counter;
     address admin;
