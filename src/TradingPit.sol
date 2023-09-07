@@ -23,7 +23,7 @@ contract TradingPit is AccessControl, ERC1155Holder, ERC721Holder {
     struct Item {
         TokenType token;
         address tokenAddress;
-        uint amount;
+        uint[] amount;
     }
 
     struct Offer {
@@ -46,7 +46,7 @@ contract TradingPit is AccessControl, ERC1155Holder, ERC721Holder {
     }
     /* 
     // very limited 
-        only 1 to 1 item
+        only y to x item of 1 collection
         only 1 ERC1155 (amount defines the ID)
     */
     function createOffer(
@@ -87,11 +87,17 @@ contract TradingPit is AccessControl, ERC1155Holder, ERC721Holder {
 
     function transferItem(address from, address to, Item memory item) internal {
         if (item.token == TokenType.ERC20) {
-            IERC20(item.tokenAddress).transferFrom(from, to, item.amount);
+            IERC20(item.tokenAddress).transferFrom(from, to, item.amount[0]);
         } else if (item.token == TokenType.ERC721) {
-            IERC721(item.tokenAddress).safeTransferFrom(from, to, item.amount, "");
+            for (uint t = 0; t < item.amount.length; t++) {
+                IERC721(item.tokenAddress).safeTransferFrom(from, to, item.amount[t], "");
+            }
         } else if (item.token == TokenType.ERC1155) {
-            IERC1155(item.tokenAddress).safeTransferFrom(from, to, item.amount, 1, "");
+            uint[] memory amounts = new uint[](item.amount.length);
+            for (uint j = 0; j < item.amount.length; j++) {
+                amounts[j] = 1;
+            }
+            IERC1155(item.tokenAddress).safeBatchTransferFrom(from, to, item.amount, amounts, "");
         } else {
             revert("Token type not supported");
         }

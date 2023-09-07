@@ -1,5 +1,5 @@
 ## Figuritas.eth
-**Go back and play like a child**
+**Te cambio esta por esas 2**
 
 Figuritas is an old project, lost in some personal computer migration, now getting an update!
 

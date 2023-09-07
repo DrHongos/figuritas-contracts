@@ -10,6 +10,14 @@ import { SobresFactory } from "../src/SobresFactory.sol";
 import { FigusCreator } from "../src/FigusCreator.sol";
 import { TradingPit } from "../src/TradingPit.sol";
 
+/* 
+    IMPORTANT
+    currently this is not testing important stuff, only a reference of UX
+    - add tests, security, integration, etc
+    
+
+*/
+
 contract FiguritasCollectionTest is Test {
     FiguritasCollection public collection;
     SobresFactory public sobres;
@@ -38,7 +46,7 @@ contract FiguritasCollectionTest is Test {
         paymentToken = new ERC20PresetMinterPauser("Payment token", "PTOK");        
         paymentToken.mint(alice, 1*10**20);
         paymentToken.mint(bob, 1*10**20);
-
+        paymentToken.mint(creator, 20*10**18);
         // launch factory (on admin's name)
         vm.startPrank(admin);
         factory = new FigusCreator();
@@ -71,6 +79,13 @@ contract FiguritasCollectionTest is Test {
         top = collection.top();
         vm.stopPrank();
     }
+    function get_repeated_address(address to, uint amo) public pure returns(address[] memory) {
+        address[] memory res = new address[](amo);
+        for (uint i = 0; i < amo; i++) {
+            res[i] = to;
+        }
+        return res;
+    }
 
     function configSale() public {
         vm.startPrank(creator);
@@ -79,7 +94,27 @@ contract FiguritasCollectionTest is Test {
         vm.stopPrank();
     }
 
-    function configIncentives() public {}
+    function configIncentives() public {
+        vm.startPrank(creator);
+        uint[] memory positions = new uint[](3);
+        uint[] memory amounts = new uint[](3);       
+        positions[0] = 0;
+        positions[1] = 1;
+        positions[2] = 2;
+
+        amounts[0] = 10*10**18;
+        amounts[1] = 5*10**18;
+        amounts[2] = 2*10**18;
+
+        paymentToken.approve(address(top), 17*10**18);
+
+        top.addIncentiveERC20(
+            positions,
+            address(paymentToken),
+            amounts
+        );
+        vm.stopPrank();
+    }
 
     function test_creation() public {
         configCollection();
@@ -135,33 +170,88 @@ contract FiguritasCollectionTest is Test {
         collection.openEnvelopes(0);
         // IDS: 1,2, 3 
         // create offer
+        uint[] memory idsOffered = new uint[](2);
+        idsOffered[0] = 1;
+        idsOffered[1] = 2;
+        uint[] memory idsRequired = new uint[](2);
+        idsRequired[0] = 4;
+        idsRequired[1] = 3;
         collection.setApprovalForAll(address(tradingPit), true);
         TradingPit.Item memory offered = TradingPit.Item (
             TradingPit.TokenType.ERC1155,
             address(collection),
-            1                           // id
+            idsOffered        // id
         );
 
         TradingPit.Item memory required = TradingPit.Item (
             TradingPit.TokenType.ERC1155,
             address(collection),
-            4                           // id
+            idsRequired                           // id
         );
         uint offerId = tradingPit.createOffer(offered, required);
         vm.stopPrank();
         
         vm.startPrank(bob);
         paymentToken.approve(address(sobres), 10*10**18); 
-        sobres.buyFigus(bob, 0, 1, 999);
+        sobres.buyFigus(bob, 0, 1, 345);
         sobres.setApprovalForAll(address(collection), true);
         collection.openEnvelopes(1);
-        // IDS: 4, 4, 2
+        // IDS: 3,4,4 <<
         collection.setApprovalForAll(address(tradingPit), true);
         // take the offer
         tradingPit.takeOffer(offerId);
         vm.stopPrank();
         assertEq(collection.balanceOf(alice, 4), 1);
         assertEq(collection.balanceOf(bob, 1), 1);
+    }
+
+    function test_my_first_prize() public {
+        // make someone win! 
+        configCollection();
+        configSale();
+        configIncentives();
+    
+        vm.startPrank(alice);
+        paymentToken.approve(address(collection), 2*10**18);
+        collection.getAlbum();
+        paymentToken.approve(address(sobres), 10*10**18); 
+        sobres.buyFigus(alice, 0, 2, 666);
+        sobres.setApprovalForAll(address(collection), true);
+        collection.openEnvelopes(0);
+        collection.openEnvelopes(1);
+// lucky to find it all!
+
+        uint[] memory all_ids = new uint[](6);
+        all_ids[0] = 0;
+        all_ids[1] = 1;
+        all_ids[2] = 2;
+        all_ids[3] = 3;
+        all_ids[4] = 4;
+        all_ids[5] = 5;
+        address[] memory rep = get_repeated_address(alice, 6);
+        collection.balanceOfBatch(rep, all_ids);
+
+        AlbumFiguritas album = AlbumFiguritas(collection.albums(alice));
+        collection.setApprovalForAll(address(album), true);
+        album.stickFigus(all_ids);
+        // claim!
+        top.claim();        
+        vm.stopPrank();
+       
+        vm.startPrank(bob);
+        paymentToken.approve(address(collection), 2*10**18);
+        collection.getAlbum();
+        paymentToken.approve(address(sobres), 10*10**18); 
+        sobres.buyFigus(bob, 0, 2, 666);
+        sobres.setApprovalForAll(address(collection), true);
+        collection.openEnvelopes(2);
+        collection.openEnvelopes(3);
+    
+        AlbumFiguritas albumBob = AlbumFiguritas(collection.albums(bob));
+        collection.setApprovalForAll(address(albumBob), true);
+        albumBob.stickFigus(all_ids);
+        top.claim();        
+        vm.stopPrank();
     }
 
     // TO BE CONTINUED
