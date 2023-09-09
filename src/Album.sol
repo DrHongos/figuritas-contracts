@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import { ERC1155Holder } from "../lib/openzeppelin-contracts/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import { IERC1155 } from "../lib/openzeppelin-contracts/contracts/token/ERC1155/IERC1155.sol";
-import { FiguritasCollection } from "./FiguritasCollection.sol";
+import { ERC1155Holder } from "../lib/openzeppelin-contracts/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import { Collection } from "./Collection.sol";
 
-contract AlbumFiguritas is ERC1155Holder {
-    FiguritasCollection _collection;
-    bool completed;
-    address collector;
+contract Album is ERC1155Holder {
+    Collection _collection;
+    bool public completed;
+    address public collector;
 
     event FiguPegada(uint[] id, uint[] amounts);
     event FiguDespegada(uint[] id);
@@ -20,7 +20,7 @@ contract AlbumFiguritas is ERC1155Holder {
 
     constructor(address _collector, address collection) {
         collector = _collector;
-        _collection = FiguritasCollection(collection);
+        _collection = Collection(collection);
     }
 
     function stickFigus(uint[] calldata ids) public onlyOwner() {

@@ -3,7 +3,7 @@
 
 Figuritas is an old project, lost in some personal computer migration, now getting an update!
 
-Uses Chainlink VRF2 to randomize figus creation and incentivizes both the creator & users to complete their albums 
+Uses Chainlink VRF2 (upgradeable) to randomize figus creation and incentivizes both the creator & users to complete their albums 
 On creation of FiguritasCollection will receive:
     - uri
         - name, description, images and more are to be in metadata located here
@@ -13,7 +13,7 @@ On creation of FiguritasCollection will receive:
 
 TODO:
 - continue w/TTD
-    - instead of deploying album & incentives, clone them (incentives can be selected from different types?)
+    - create/Use interfaces in the contracts
     - All the tests i havent done yet..
     
     - fees & withdraw                   <<<

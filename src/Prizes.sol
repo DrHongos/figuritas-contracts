@@ -2,11 +2,12 @@
 pragma solidity ^0.8.13;
 
 import "../lib/openzeppelin-contracts/contracts/utils/Counters.sol";
-import { Ownable } from "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import { Initializable } from "../lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 import { IERC20 } from "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import { OwnableUpgradeable } from "../lib/openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
 import { ReentrancyGuard } from "../lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
-import { FiguritasCollection } from "./FiguritasCollection.sol";
-import { AlbumFiguritas } from "./AlbumFiguritas.sol";
+import { Collection } from "./Collection.sol";
+import { Album } from "./Album.sol";
 
 /* 
     Make it more open, like an abstract contract with the functions claim() and neccessary storage to build upon
@@ -18,17 +19,16 @@ import { AlbumFiguritas } from "./AlbumFiguritas.sol";
 
 */
 
-contract CollectorsTop is Ownable, ReentrancyGuard {
+contract Prizes is Initializable, OwnableUpgradeable, ReentrancyGuard {
     using Counters for Counters.Counter;
 
-    FiguritasCollection _collection;
+    Collection _collection;
     address[] public top;
 
     struct Prize {                      // try to re-use for multiple prizes and types
         address paymentToken;           // could be any digital asset address
         uint amount;                    // could be amount or ID (ie: ERC721)
     }
-
     mapping(uint => Prize) public prizes;
 
     Counters.Counter private _currentPosition;
@@ -36,9 +36,9 @@ contract CollectorsTop is Ownable, ReentrancyGuard {
     event AlbumCompleted(address indexed collector, address indexed album, uint position);
     event IncentiveAdded(address indexed paymentToken, uint[] positions, uint[] amounts);
 
-    constructor() {
-        _collection = FiguritasCollection(msg.sender);
-    }
+    function initialize() initializer() public {
+        _collection = Collection(msg.sender);
+    } 
 
     function addIncentiveERC20(uint[] calldata positions, address paymentToken, uint[] calldata amounts) public {
         uint totalAmount;
@@ -61,7 +61,7 @@ contract CollectorsTop is Ownable, ReentrancyGuard {
     function claim() public nonReentrant() {
         address albumAddress = _collection.albums(msg.sender);
         // checks album is completed
-        require(AlbumFiguritas(albumAddress).fullAlbumProof() == true, "Album is not completed");
+        require(Album(albumAddress).fullAlbumProof() == true, "Album is not completed");
         // stores the album in top
         top.push(msg.sender);
         // launches incentives

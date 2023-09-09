@@ -2,12 +2,12 @@
 pragma solidity ^0.8.13;
 
 import {Test, console2} from "forge-std/Test.sol";
-import {FiguritasCollection} from "../src/FiguritasCollection.sol";
+import {Collection} from "../src/Collection.sol";
 import { ERC20PresetMinterPauser } from "../lib/openzeppelin-contracts/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
-import { AlbumFiguritas } from "../src/AlbumFiguritas.sol";
-import { CollectorsTop } from "../src/CollectorsIncentive.sol";
-import { SobresFactory } from "../src/SobresFactory.sol";
-import { FigusCreator } from "../src/FigusCreator.sol";
+import { Album } from "../src/Album.sol";
+import { Prizes } from "../src/Prizes.sol";
+import { Pocket } from "../src/Pocket.sol";
+import { Factory } from "../src/Factory.sol";
 import { TradingPit } from "../src/TradingPit.sol";
 
 /* 
@@ -15,14 +15,15 @@ import { TradingPit } from "../src/TradingPit.sol";
     currently this is not testing important stuff, only a reference of UX
     - add tests, security, integration, etc
     
+    - naming sucks.. 
 
 */
 
-contract FiguritasCollectionTest is Test {
-    FiguritasCollection public collection;
-    SobresFactory public sobres;
-    CollectorsTop public top;
-    FigusCreator public factory;
+contract FiguritasTest is Test {
+    Collection public collection;
+    Pocket public sobres;
+    Prizes public top;
+    Factory public factory;
     ERC20PresetMinterPauser public paymentToken;
     TradingPit public tradingPit;
 
@@ -32,6 +33,10 @@ contract FiguritasCollectionTest is Test {
     address admin;
     address alice;
     address bob;
+
+    address collectionTemplate;
+    address pocketTemplate;
+    address prizesTemplate;
 
     uint pricePerUnit = 1 * 10 ** 17;
     uint fee = 500; // 5 %
@@ -49,9 +54,19 @@ contract FiguritasCollectionTest is Test {
         paymentToken.mint(creator, 20*10**18);
         // launch factory (on admin's name)
         vm.startPrank(admin);
-        factory = new FigusCreator();
+        factory = new Factory();
+        collection = new Collection();
+        collectionTemplate = address(collection);
+        
+        Pocket sf = new Pocket();
+        pocketTemplate = address(sf);
+        top = new Prizes();
+        prizesTemplate = address(top);
         tradingPit = new TradingPit();
 
+        factory.setCollectionTemplate(collectionTemplate);
+        factory.setPocketTemplate(pocketTemplate);
+        
         factory.setFee(fee);
         factory.setSubscriptionId(subscriptionId);
         
@@ -74,7 +89,7 @@ contract FiguritasCollectionTest is Test {
             densityCurve
         );
 
-        collection = FiguritasCollection(collectionAddress);
+        collection = Collection(collectionAddress);
         sobres = collection.sobres();
         top = collection.top();
         vm.stopPrank();
@@ -123,6 +138,7 @@ contract FiguritasCollectionTest is Test {
         assertEq(test_random_select, 1);
         assertEq(test_last, 5);
         assertEq(collection.uri(0), uri);
+        
 //        assertEq(address(collection.paymentsToken()), address(paymentToken));
     }
 
@@ -151,7 +167,7 @@ contract FiguritasCollectionTest is Test {
         ids[0] = 1;
         ids[1] = 2;
         ids[2] = 3;
-        AlbumFiguritas album = AlbumFiguritas(collection.albums(alice));
+        Album album = Album(collection.albums(alice));
         collection.setApprovalForAll(address(album), true);
         album.stickFigus(ids);
         vm.stopPrank();
@@ -231,7 +247,7 @@ contract FiguritasCollectionTest is Test {
         address[] memory rep = get_repeated_address(alice, 6);
         collection.balanceOfBatch(rep, all_ids);
 
-        AlbumFiguritas album = AlbumFiguritas(collection.albums(alice));
+        Album album = Album(collection.albums(alice));
         collection.setApprovalForAll(address(album), true);
         album.stickFigus(all_ids);
         // claim!
@@ -247,7 +263,7 @@ contract FiguritasCollectionTest is Test {
         collection.openEnvelopes(2);
         collection.openEnvelopes(3);
     
-        AlbumFiguritas albumBob = AlbumFiguritas(collection.albums(bob));
+        Album albumBob = Album(collection.albums(bob));
         collection.setApprovalForAll(address(albumBob), true);
         albumBob.stickFigus(all_ids);
         top.claim();        

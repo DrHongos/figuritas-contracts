@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "../lib/openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
-import "../lib/openzeppelin-contracts/contracts/token/ERC721/extensions/ERC721Burnable.sol";
-import "../lib/openzeppelin-contracts/contracts/access/Ownable.sol";
-import "../lib/openzeppelin-contracts/contracts/utils/Counters.sol";
+import "../lib/openzeppelin-contracts-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
+import "../lib/openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensions/ERC721BurnableUpgradeable.sol";
+import "../lib/openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
+import "../lib/openzeppelin-contracts-upgradeable/contracts/utils/CountersUpgradeable.sol";
+import { Initializable } from "../lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 import { IERC20 } from "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import { ReentrancyGuard } from "../lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
-import { VRFConsumerBaseV2 } from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import { VRFConsumerBaseV2Upgradeable } from "./VRFConsumerBaseV2Upgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 
 /* 
@@ -16,10 +17,16 @@ import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
         - min fee (necessary)    
 */
 
-contract SobresFactory is ERC721, ERC721Burnable, Ownable, VRFConsumerBaseV2, ReentrancyGuard {
-    using Counters for Counters.Counter;
-    address admin;
-    address collection;
+contract Pocket is
+    Initializable,
+    ERC721Upgradeable, 
+    ERC721BurnableUpgradeable, 
+    OwnableUpgradeable, 
+    VRFConsumerBaseV2Upgradeable, 
+    ReentrancyGuard 
+{
+    using CountersUpgradeable for CountersUpgradeable.Counter;
+    address public admin;
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "Only admin can call");
@@ -29,13 +36,13 @@ contract SobresFactory is ERC721, ERC721Burnable, Ownable, VRFConsumerBaseV2, Re
     event SobresConfig(uint amount, address paymentToken, uint price, uint limit);
     event SobresBought(address indexed owner, uint _type, uint amount);
 
-    uint64 subscriptionId;              // VRF subscription
-    VRFCoordinatorV2Interface COORDINATOR;
+    uint64 _subscriptionId;              // VRF subscription
+    VRFCoordinatorV2Interface _COORDINATOR;
     // The gas lane to use, which specifies the maximum gas price to bump to.
     // see https://docs.chain.link/docs/vrf/v2/subscription/supported-networks/#configurations
-    bytes32 keyHash = 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c;
-    uint32 callbackGasLimit = 2000000;
-    uint16 requestConfirmations = 3;
+    bytes32 _keyHash = 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c;
+    uint32 _callbackGasLimit = 2000000;
+    uint16 _requestConfirmations = 3;
 
     struct SobreConfig {
         uint amount;            // how many figus this sobre contains
@@ -57,13 +64,29 @@ contract SobresFactory is ERC721, ERC721Burnable, Ownable, VRFConsumerBaseV2, Re
         uint random;
     }
 
-    Counters.Counter private _tokenIdCounter;
-    Counters.Counter public _configCounter;
+    CountersUpgradeable.Counter private _tokenIdCounter;
+    CountersUpgradeable.Counter public configCounter;
 
     mapping(uint => SobreConfig) public promotions;
     mapping(uint => Sobre) public sobres;
     mapping(uint => Request) public requests;
 
+    function initialize(
+        address _admin,
+        uint64 subscriptionId
+    ) initializer public {
+        __ERC721_init("SOBRE", "SFIGU");
+        __ERC721Burnable_init();
+        __Ownable_init();
+        admin = _admin;
+        _subscriptionId = subscriptionId;
+        __VRFConsumerBaseV2Upgradeable_init(0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625);
+        _COORDINATOR = VRFCoordinatorV2Interface(
+            0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625
+        ); 
+    }
+
+/* 
     constructor(string memory name, string memory symbol, address _admin, uint64 _subscriptionId) 
     ERC721(name, symbol) 
     VRFConsumerBaseV2(0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625)
@@ -75,16 +98,16 @@ contract SobresFactory is ERC721, ERC721Burnable, Ownable, VRFConsumerBaseV2, Re
             0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625
         ); 
     }
-
+ */
     function configSobre(uint amount, uint price, address paymentToken, uint limit) public onlyAdmin() {
-        uint configCounter = _configCounter.current();        
-        promotions[configCounter] = SobreConfig (
+        uint _configCounter = configCounter.current();        
+        promotions[_configCounter] = SobreConfig (
             amount,
             paymentToken,
             price,
             limit   
         );
-        _configCounter.increment();
+        configCounter.increment();
         emit SobresConfig(amount, paymentToken, price, limit);
     } 
 
@@ -110,7 +133,7 @@ contract SobresFactory is ERC721, ERC721Burnable, Ownable, VRFConsumerBaseV2, Re
         for (uint i = 0; i < amount; i++) {
             randomWordsC[i] = uint256(keccak256(abi.encode(fakeRandom, i)));
         }
-        fakeFulfillRandomWords(fakeRandom, randomWordsC);
+        _fakeFulfillRandomWords(fakeRandom, randomWordsC);
         ///////////////////////////////////////////////////////////////////
 
         emit SobresBought(beneficiary, _config, amount);
@@ -120,11 +143,11 @@ contract SobresFactory is ERC721, ERC721Burnable, Ownable, VRFConsumerBaseV2, Re
         public
         returns (uint256 requestId)
     {
-        requestId = COORDINATOR.requestRandomWords(
-            keyHash,
-            subscriptionId,
-            requestConfirmations,
-            callbackGasLimit,
+        requestId = _COORDINATOR.requestRandomWords(
+            _keyHash,
+            _subscriptionId,
+            _requestConfirmations,
+            _callbackGasLimit,
             uint32(amount)
         );
         requests[requestId] = Request({
@@ -137,7 +160,7 @@ contract SobresFactory is ERC721, ERC721Burnable, Ownable, VRFConsumerBaseV2, Re
         return requestId;
     }
     
-    function fakeFulfillRandomWords(
+    function _fakeFulfillRandomWords(
         uint256 _requestId,
         uint256[] memory _randomWords
     )
