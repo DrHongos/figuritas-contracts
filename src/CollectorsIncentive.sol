@@ -9,7 +9,9 @@ import { FiguritasCollection } from "./FiguritasCollection.sol";
 import { AlbumFiguritas } from "./AlbumFiguritas.sol";
 
 /* 
-    Make a fallback fn in order to increase the prizes with external money
+    Make it more open, like an abstract contract with the functions claim() and neccessary storage to build upon
+
+    Make a fallback(?) fn in order to increase the prizes with external money
     can be used to create prizes from figus sells
 
     Put prices in proportion and cancel out the winners (?)

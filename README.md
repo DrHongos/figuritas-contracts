@@ -1,5 +1,5 @@
 ## Figuritas.eth
-**Te cambio esta por esas 2**
+**Te cambio esta por esas dos**
 
 Figuritas is an old project, lost in some personal computer migration, now getting an update!
 
@@ -13,6 +13,7 @@ On creation of FiguritasCollection will receive:
 
 TODO:
 - continue w/TTD
+    - instead of deploying album & incentives, clone them (incentives can be selected from different types?)
     - All the tests i havent done yet..
     
     - fees & withdraw                   <<<
@@ -20,8 +21,7 @@ TODO:
             - min fee for sobre (LINK fees related)
     
     - TradingPit
-        - multiple conditions
-            (kind of free interpretation of required vs offered)
+        (kind of free interpretation of required vs offered)
             implies a problem storing the multiple Item
 
 second test: https://sepolia.etherscan.io/address/0x7d22603C231a747A99B0Cabab6B2E6EaA7D983Ae

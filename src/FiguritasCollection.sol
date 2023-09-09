@@ -10,10 +10,14 @@ import { SobresFactory } from "./SobresFactory.sol";
 import { AlbumFiguritas } from "./AlbumFiguritas.sol";
 import { CollectorsTop } from "./CollectorsIncentive.sol";
 
+/* 
+    Do NOT deploy new contracts, clone them!
+
+*/
+
 contract FiguritasCollection is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard {
     uint8[] public densityCurveFigus;   // later private // limits total amount of figus to 256
     uint8 public numberFigus;           // limited to 255
-
 
     address factory;
     address creator;
@@ -21,6 +25,7 @@ contract FiguritasCollection is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard
     uint protocolBalance;
     uint public fee;
 
+    // maybe move this to factory, use clones
     SobresFactory public sobres;    
     CollectorsTop public top;
 
@@ -48,12 +53,13 @@ contract FiguritasCollection is ERC1155, ERC1155Supply, Ownable, ReentrancyGuard
         fee = _fee;
         creator = _creator;
 
-        sobres = new SobresFactory(
-            "sobresFactory", 
-            "SOBRE", 
-            _creator,             // admin of sobresFactory
-            _subscriptionId);
-        top = new CollectorsTop();        
+        // move this to factory, clone
+//        sobres = new SobresFactory(
+//            "sobresFactory", 
+//            "SOBRE", 
+//            _creator,             // admin of sobresFactory
+//            _subscriptionId);
+//        top = new CollectorsTop();        
 
         // populate densityCurveFigus        
         densityCurveFigus.push(0);                      // discarded slot (because of normalization of VRF)
