@@ -8,6 +8,7 @@ import { OwnableUpgradeable } from "../lib/openzeppelin-contracts-upgradeable/co
 import { ReentrancyGuard } from "../lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 import { Collection } from "./Collection.sol";
 import { Album } from "./Album.sol";
+import { Factory } from "./Factory.sol";
 
 /* 
     Make it more open, like an abstract contract with the functions claim() and neccessary storage to build upon
@@ -21,7 +22,7 @@ import { Album } from "./Album.sol";
 
 contract Prizes is Initializable, OwnableUpgradeable, ReentrancyGuard {
     using Counters for Counters.Counter;
-
+    address public factory;
     Collection _collection;
     address[] public top;
 
@@ -36,8 +37,9 @@ contract Prizes is Initializable, OwnableUpgradeable, ReentrancyGuard {
     event AlbumCompleted(address indexed collector, address indexed album, uint position);
     event IncentiveAdded(address indexed paymentToken, uint[] positions, uint[] amounts);
 
-    function initialize() initializer() public {
-        _collection = Collection(msg.sender);
+    function initialize(address collection) initializer() public {
+        factory = msg.sender;
+        _collection = Collection(collection);
     } 
 
     function addIncentiveERC20(uint[] calldata positions, address paymentToken, uint[] calldata amounts) public {
@@ -59,7 +61,7 @@ contract Prizes is Initializable, OwnableUpgradeable, ReentrancyGuard {
     // function addIncentiveERC1155(uint[] positions, address[] paymentTokens, uint[] amounts) public {};
 
     function claim() public nonReentrant() {
-        address albumAddress = _collection.albums(msg.sender);
+        address albumAddress = Factory(factory).albums(address(_collection), msg.sender);
         // checks album is completed
         require(Album(albumAddress).fullAlbumProof() == true, "Album is not completed");
         // stores the album in top

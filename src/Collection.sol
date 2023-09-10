@@ -22,8 +22,8 @@ contract Collection is
 
     address _factory;
     address _creator;
-    uint _creatorBalance;
-    uint _protocolBalance;
+//    uint _creatorBalance;
+//    uint _protocolBalance;
     uint public fee;
 
     Pocket public sobres;    
@@ -37,7 +37,7 @@ contract Collection is
 
     event AlbumPriceConfig(address indexed paymentToken, uint value);
     event AlbumCreated(address indexed owner, address indexed album);
-    event SobreOpened(address indexed owner, uint id, uint[] ids);
+    event PackOpened(address indexed owner, uint id, uint[] ids);
 
     function initialize(
         address creator,
@@ -69,6 +69,7 @@ contract Collection is
         }
     }
 
+/* 
     function setAlbumPrice(address paymentToken, uint price) public {
         require(msg.sender == _creator, "Only creator can set");
         _paymentToken = paymentToken;
@@ -76,7 +77,8 @@ contract Collection is
         _protocolAlbumPrice = fee * price / 10000;
         emit AlbumPriceConfig(paymentToken, price);
     }
-
+    // Migrate this to use clones!
+    // maybe buy it from factory?
     function getAlbum() public {
         require(albums[msg.sender] == address(0), "Already owner of an album");
         if (_albumPrice > 0) {
@@ -84,15 +86,16 @@ contract Collection is
             _creatorBalance += _albumPrice - _protocolAlbumPrice;
             _protocolBalance += _protocolAlbumPrice;
         }
+        // here
         Album albumCreated = new Album(msg.sender, address(this));
         address albumCreatedAddress = address(albumCreated);
         albums[msg.sender] = albumCreatedAddress;
         emit AlbumCreated(msg.sender, albumCreatedAddress);
     }
-
-    function openEnvelopes(uint id) public nonReentrant() {
+ */
+    function openPack(uint id) public nonReentrant() {
         require(sobres.ownerOf(id) == msg.sender, "Not owner of sobre");
-        (uint amount, uint random) = sobres.getSobreInformation(id);
+        (uint amount, uint random) = sobres.getPackInformation(id);
         
         uint256[] memory ids = new uint256[](amount);
         uint256[] memory amounts = new uint256[](amount);
@@ -104,9 +107,9 @@ contract Collection is
             }
         sobres.burn(id);
         _mintBatch(msg.sender, ids, amounts, "");
-        emit SobreOpened(msg.sender, id, ids);
+        emit PackOpened(msg.sender, id, ids);
     }
-
+/* 
     function protocolWithdraw(address beneficiary) public onlyOwner() {
         //require(msg.sender == factory, "Only factory can call");
         IERC20(_paymentToken).transfer(beneficiary, _protocolBalance);
@@ -118,7 +121,7 @@ contract Collection is
         IERC20(_paymentToken).transfer(beneficiary, _creatorBalance);
         _creatorBalance = 0;
     }
-
+ */
     // OVERRIDES
     function _beforeTokenTransfer(address operator, address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data)
         internal

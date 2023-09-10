@@ -1,27 +1,27 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import { IERC1155 } from "../lib/openzeppelin-contracts/contracts/token/ERC1155/IERC1155.sol";
-import { ERC1155Holder } from "../lib/openzeppelin-contracts/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import { ERC1155HolderUpgradeable } from "../lib/openzeppelin-contracts-upgradeable/contracts/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
+import { Initializable } from "../lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 import { Collection } from "./Collection.sol";
 
-contract Album is ERC1155Holder {
+contract Album is Initializable, ERC1155HolderUpgradeable {
     Collection _collection;
     bool public completed;
     address public collector;
 
-    event FiguPegada(uint[] id, uint[] amounts);
-    event FiguDespegada(uint[] id);
+    event FiguSticked(uint[] id);
+    event FiguUnsticked(uint[] id);
 
     modifier onlyOwner() {
         require(msg.sender == collector, "Only owner of album");
         _;
     }
-
-    constructor(address _collector, address collection) {
+    
+    function initialize(address _collector, address collection) initializer() public {
         collector = _collector;
         _collection = Collection(collection);
-    }
+    } 
 
     function stickFigus(uint[] calldata ids) public onlyOwner() {
         uint length = ids.length;
@@ -48,7 +48,7 @@ contract Album is ERC1155Holder {
             completed = true;
         }
         
-        emit FiguPegada(ids, amounts);
+        emit FiguSticked(ids);
     }        
 
     function unstickFigus(address to, uint[] memory ids) public onlyOwner() {
@@ -61,7 +61,7 @@ contract Album is ERC1155Holder {
         _collection.safeBatchTransferFrom(
             address(this), to, ids, amounts, ""
         );
-        emit FiguDespegada(ids);
+        emit FiguUnsticked(ids);
     }
 
     function fullAlbumProof() public view returns (bool) {

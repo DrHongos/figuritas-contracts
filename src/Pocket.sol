@@ -33,18 +33,19 @@ contract Pocket is
         _;
     }
 
-    event SobresConfig(uint amount, address paymentToken, uint price, uint limit);
-    event SobresBought(address indexed owner, uint _type, uint amount);
+    event PackConfigured(uint amount, address paymentToken, uint price, uint limit);
+    event PackBought(address indexed owner, uint _type, uint amount);
 
     uint64 _subscriptionId;              // VRF subscription
-    VRFCoordinatorV2Interface _COORDINATOR;
+    VRFCoordinatorV2Interface _coordinator;
     // The gas lane to use, which specifies the maximum gas price to bump to.
     // see https://docs.chain.link/docs/vrf/v2/subscription/supported-networks/#configurations
     bytes32 _keyHash = 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c;
     uint32 _callbackGasLimit = 2000000;
     uint16 _requestConfirmations = 3;
-
-    struct SobreConfig {
+    address _coordinatorAddress = 0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625;
+    
+    struct PackConfig {
         uint amount;            // how many figus this sobre contains
         address paymentToken;   // how is it payed
         uint price;             // how much it cost (in payment token)
@@ -59,7 +60,7 @@ contract Pocket is
         uint[] randomWords;
     }
 
-    struct Sobre {
+    struct Pack {
         uint config;
         uint random;
     }
@@ -67,52 +68,37 @@ contract Pocket is
     CountersUpgradeable.Counter private _tokenIdCounter;
     CountersUpgradeable.Counter public configCounter;
 
-    mapping(uint => SobreConfig) public promotions;
-    mapping(uint => Sobre) public sobres;
+    mapping(uint => PackConfig) public configurations;
+    mapping(uint => Pack) public packs;
     mapping(uint => Request) public requests;
 
     function initialize(
         address _admin,
         uint64 subscriptionId
     ) initializer public {
-        __ERC721_init("SOBRE", "SFIGU");
+        __ERC721_init("Pack figuritas", "PACK");
         __ERC721Burnable_init();
         __Ownable_init();
         admin = _admin;
         _subscriptionId = subscriptionId;
-        __VRFConsumerBaseV2Upgradeable_init(0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625);
-        _COORDINATOR = VRFCoordinatorV2Interface(
-            0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625
-        ); 
+        __VRFConsumerBaseV2Upgradeable_init(_coordinatorAddress);
+        _coordinator = VRFCoordinatorV2Interface(_coordinatorAddress); 
     }
 
-/* 
-    constructor(string memory name, string memory symbol, address _admin, uint64 _subscriptionId) 
-    ERC721(name, symbol) 
-    VRFConsumerBaseV2(0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625)
-    {
-        admin = _admin;
-        collection = msg.sender;
-        subscriptionId = _subscriptionId;
-        COORDINATOR = VRFCoordinatorV2Interface(
-            0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625
-        ); 
-    }
- */
-    function configSobre(uint amount, uint price, address paymentToken, uint limit) public onlyAdmin() {
+    function configPack(uint amount, uint price, address paymentToken, uint limit) public onlyAdmin() {
         uint _configCounter = configCounter.current();        
-        promotions[_configCounter] = SobreConfig (
+        configurations[_configCounter] = PackConfig (
             amount,
             paymentToken,
             price,
             limit   
         );
         configCounter.increment();
-        emit SobresConfig(amount, paymentToken, price, limit);
+        emit PackConfigured(amount, paymentToken, price, limit);
     } 
 
-    function buyFigus(address beneficiary, uint _config, uint amount, uint fakeRandom) public nonReentrant() {
-        SobreConfig storage config = promotions[_config];
+    function buyPack(address beneficiary, uint _config, uint amount, uint fakeRandom) public nonReentrant() {
+        PackConfig storage config = configurations[_config];
         require(config.limit > amount, "Not enough in sale!");
         config.limit -= amount;
 
@@ -136,14 +122,14 @@ contract Pocket is
         _fakeFulfillRandomWords(fakeRandom, randomWordsC);
         ///////////////////////////////////////////////////////////////////
 
-        emit SobresBought(beneficiary, _config, amount);
+        emit PackBought(beneficiary, _config, amount);
     }
 
     function requestRandomWords(address requester, uint amount, uint _config)
         public
         returns (uint256 requestId)
     {
-        requestId = _COORDINATOR.requestRandomWords(
+        requestId = _coordinator.requestRandomWords(
             _keyHash,
             _subscriptionId,
             _requestConfirmations,
@@ -172,7 +158,7 @@ contract Pocket is
 
         for (uint i = 0; i < _randomWords.length; i++) {
             uint256 tokenId = _tokenIdCounter.current();
-            sobres[tokenId] = Sobre (
+            packs[tokenId] = Pack (
                 request.config,
                 _randomWords[i]
             );
@@ -180,7 +166,7 @@ contract Pocket is
             _safeMint(request.beneficiary, tokenId);
         }
     }    
-
+    // @ignore
     function fulfillRandomWords(
         uint256 _requestId,
         uint256[] memory _randomWords
@@ -193,7 +179,7 @@ contract Pocket is
 
         for (uint i = 0; i < _randomWords.length; i++) {
             uint256 tokenId = _tokenIdCounter.current();
-            sobres[tokenId] = Sobre (
+            packs[tokenId] = Pack (
                 request.config,
                 _randomWords[i]
             );
@@ -202,9 +188,9 @@ contract Pocket is
         }
     }    
 
-    function getSobreInformation(uint id) public view returns (uint amount, uint random) {
-        Sobre memory sobre = sobres[id];
-        return (promotions[sobre.config].amount, sobre.random);
+    function getPackInformation(uint id) public view returns (uint amount, uint random) {
+        Pack memory dPack = packs[id];
+        return (configurations[dPack.config].amount, dPack.random);
     }
 
     function withdraw(address token) public {

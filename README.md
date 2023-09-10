@@ -13,7 +13,10 @@ On creation of FiguritasCollection will receive:
 
 TODO:
 - continue w/TTD
-    - create/Use interfaces in the contracts
+    - Album: 
+        - migrate creation to cloning
+        - should be created in collection? of factory?
+
     - All the tests i havent done yet..
     
     - fees & withdraw                   <<<
@@ -23,6 +26,12 @@ TODO:
     - TradingPit
         (kind of free interpretation of required vs offered)
             implies a problem storing the multiple Item
+
+Optimizations
+    - create/Use interfaces in the contracts
+    - find a better way to get repetitive values arrays
+    - improve density curve generation
+
 
 second test: https://sepolia.etherscan.io/address/0x7d22603C231a747A99B0Cabab6B2E6EaA7D983Ae
     sobres factory: 0xAA36Cf581373e97794f183882A1C9419F3E32485
