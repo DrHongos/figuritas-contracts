@@ -122,6 +122,7 @@ contract Pocket is
     public 
     onlyOwner()
     {
+        configurations[_config].limit -= amount;
         // TESTS BYPASS OF VRF      //////////////////////////////////////
         uint[] memory randomWordsC = new uint[](amount);
         for (uint i = 0; i < amount; i++) {

@@ -1,3 +1,28 @@
+TODO:
+- factory interfaces
+    - if interfaces of "upgraded" models (Album, Pocket, Prizes) where to change Factory will be unusable 
+    - maybe do it upgradeable and call it through a proxy?
+
+- continue w/TTD
+    - Improve tests     <
+
+- Min price for packs (token dependent)
+
+Optimizations
+    - create & use interfaces in the contracts
+    - improve density curve generation
+    - TradingPit
+        (kind of free interpretation of required vs offered)
+            implies a problem storing the multiple Item in a struct
+
+test token: 0xe203e99c57A7F8913E3E617b279C4d9E0F9f13b2
+
+-----------------------------------------------------------
+- VRF v2 (https://docs.chain.link/vrf/v2/subscription)
+https://vrf.chain.link/sepolia/4963
+
+
+
 ## Figuritas.eth
 **Te cambio esta por esas dos**
 
@@ -9,32 +34,6 @@ On creation of FiguritasCollection will receive:
         - name, description, images and more are to be in metadata located here
     - densityCurveFiguritas
         - an array of uint8 stating density of emission for each card (as its index). Preferably reduced to minimum common denominator to reduce contract storage
-
-
-TODO:
-- continue w/TTD
-    - All the tests i havent done yet..
-        
-    - TradingPit
-        (kind of free interpretation of required vs offered)
-            implies a problem storing the multiple Item
-
-Optimizations
-    - create/Use interfaces in the contracts
-    - find a better way to get repetitive values arrays
-    - improve density curve generation
-
-
-second test: https://sepolia.etherscan.io/address/0x7d22603C231a747A99B0Cabab6B2E6EaA7D983Ae
-    sobres factory: 0xAA36Cf581373e97794f183882A1C9419F3E32485
-test token: 0xe203e99c57A7F8913E3E617b279C4d9E0F9f13b2
-
------------------------------------------------------------
-- VRF v2 (https://docs.chain.link/vrf/v2/subscription)
-https://vrf.chain.link/sepolia/4963
-
-
-
 
 ## Foundry
 

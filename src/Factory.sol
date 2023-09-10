@@ -146,15 +146,14 @@ contract Factory is AccessControl, ReentrancyGuard {
 
 
     function buyPack(address beneficiary, address collection, uint _config, uint amount, uint fakeRandom) public nonReentrant() {
-        Pocket pkt = Pocket(Collection(collection).sobres()); 
+        Pocket pkt = Pocket(Collection(collection).pocket()); 
         (, uint price, uint limit) = pkt.configurations(_config);
-        require(limit > amount, "Not enough in sale!");
+        require(limit >= amount, "Not enough in sale!");
 
         uint totalValue = amount * price;
-
-        uint _protocolPackPrice = price * fee / 10000;
-        creatorBalance[collection] += price - _protocolPackPrice;
-        _protocolBalance[collection] += _protocolPackPrice;
+        uint _protocolPay = totalValue * fee / 10000;
+        creatorBalance[collection] += totalValue - _protocolPay;
+        _protocolBalance[collection] += _protocolPay;
         IERC20(paymentToken[collection]).transferFrom(msg.sender, address(this), totalValue);
         
         // _requestRandomWords(beneficiary, amount, _config);                   // real

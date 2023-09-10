@@ -19,8 +19,8 @@ contract Collection is
     address public factory;
     address public creator;
 
-    Pocket public sobres;    
-    Prizes public top;
+    Pocket public pocket;    
+    Prizes public prizes;
 
     address _paymentToken;
     uint _albumPrice;
@@ -31,8 +31,8 @@ contract Collection is
     function initialize(
         address _creator,
         string memory uri, 
-        address _sobres,
-        address _top,
+        address _pocket,
+        address _prizes,
         uint8[] memory _densityCurveFigus
     ) initializer public {
         factory = msg.sender;
@@ -41,8 +41,8 @@ contract Collection is
         __ERC1155_init(uri);
         __ERC1155Supply_init();
 
-        sobres = Pocket(_sobres);
-        top = Prizes(_top);
+        pocket = Pocket(_pocket);
+        prizes = Prizes(_prizes);
         
         // populate densityCurveFigus        
         densityCurveFigus.push(0);                      // discarded slot (because of normalization of VRF)
@@ -55,9 +55,9 @@ contract Collection is
     }
 
     function openPack(uint id) public {
-        require(sobres.ownerOf(id) == msg.sender, "Not owner of sobre");
-        sobres.burn(id);
-        (uint amount, uint random) = sobres.getPackInformation(id);
+        require(pocket.ownerOf(id) == msg.sender, "Not owner of pack");
+        pocket.burn(id);
+        (uint amount, uint random) = pocket.getPackInformation(id);
         
         uint256[] memory ids = new uint256[](amount);
         uint256[] memory amounts = new uint256[](amount);
