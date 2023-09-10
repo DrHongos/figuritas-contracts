@@ -21,22 +21,24 @@ contract Factory is AccessControl {
 
     uint public fee;
     uint64 _subscriptionId;
-    address public paymentToken;    // move to mapping of approvedTokens 
+
+    mapping(address => bool) public allowedTokens;
+    mapping(address => address) public paymentToken;
 
     address public collectionTemplate;
     address public pocketTemplate;
     address public prizesTemplate; // this is going to be probably multiple (mapping)
     address public albumTemplate;
 
-    uint _creatorBalance;
-    uint _protocolBalance;
+    mapping(address => uint) public creatorBalance;
+    mapping(address => uint) _protocolBalance;
     
     Counters.Counter public index;
     mapping(uint => address) public collections;
     mapping(address => uint) public albumPrice;
     mapping(address => mapping(address => address)) public albums;
 
-    event NewCollection(uint index, address creator, address collection);
+    event NewCollection(uint index, address creator, address paymentToken, address collection, address prizes, address packs);
     event AlbumCreated(address indexed owner, address indexed album);
 
     constructor() {
@@ -45,7 +47,7 @@ contract Factory is AccessControl {
     }
 
     function setFee(uint _fee) public onlyRole(ADMIN) {
-        // make it over 1000
+        // make it over 10000
         fee = _fee;
     }
 
@@ -60,10 +62,11 @@ contract Factory is AccessControl {
     function withdrawSobres(address beneficiary, address collection) public onlyRole(ADMIN) {
         // TODO
     }
-    // later update for a mapping
-    function setPaymentToken(address token) public {    // , bool accepted
-        paymentToken = token;
-    }
+    function setAllowedToken(address token, bool allowed) public onlyRole(ADMIN) {
+        allowedTokens[token] = allowed;
+    } 
+    
+    // TEMPLATES
     function setCollectionTemplate(address template) public onlyRole(DEFAULT_ADMIN_ROLE) {
         collectionTemplate = template;
     }
@@ -73,13 +76,23 @@ contract Factory is AccessControl {
     function setPrizesTemplate(address template) public onlyRole(DEFAULT_ADMIN_ROLE) {
         prizesTemplate = template;
     }
-
     function setAlbumTemplate(address template) public onlyRole(DEFAULT_ADMIN_ROLE) {
         albumTemplate = template;
     }
-// add fee and albumPrice
-    function createCollection(
-        
+
+    function protocolWithdraw(address beneficiary, address collection) public onlyRole(ADMIN) {
+        IERC20(paymentToken[collection]).transfer(beneficiary, _protocolBalance[collection]);
+        _protocolBalance[collection] = 0;
+    }
+
+    function creatorWithdraw(address beneficiary, address collection) public {
+        require(msg.sender == Collection(collection).creator(), "Only creator can call");
+        IERC20(paymentToken[collection]).transfer(beneficiary, creatorBalance[collection]);
+        creatorBalance[collection] = 0;
+    }
+
+    function createCollection(        
+        address _paymentToken,
         uint _albumPrice,
         string memory uri, 
         uint8[] memory _densityCurveFigus
@@ -87,8 +100,8 @@ contract Factory is AccessControl {
         uint currentIndex = index._value;
         index.increment();
         address creator = msg.sender;
-        address npocket = Clones.clone(pocketTemplate);
-        Pocket(npocket).initialize(creator, _subscriptionId);
+        address nPocket = Clones.clone(pocketTemplate);
+        Pocket(nPocket).initialize(creator, _subscriptionId);
         address nCollectionAddress = Clones.clone(collectionTemplate);
         address nPrizesAddress = Clones.clone(prizesTemplate);
         Prizes(nPrizesAddress).initialize(nCollectionAddress);
@@ -96,14 +109,13 @@ contract Factory is AccessControl {
         Collection(nCollectionAddress).initialize(
             creator, 
             uri, 
-            fee, 
-            npocket,
+            nPocket,
             nPrizesAddress,
             _densityCurveFigus 
         );
-
+        paymentToken[nCollectionAddress] = _paymentToken;
         collections[currentIndex] = nCollectionAddress;
-        emit NewCollection(currentIndex, creator, nCollectionAddress);
+        emit NewCollection(currentIndex, creator, _paymentToken, nCollectionAddress, nPrizesAddress, nPocket);
         return nCollectionAddress;
     }
  
@@ -112,9 +124,9 @@ contract Factory is AccessControl {
         uint _albumPrice = albumPrice[collection];
         if (_albumPrice > 0) {
             uint _protocolAlbumPrice = _albumPrice * fee / 10000;
-            _creatorBalance += _albumPrice - _protocolAlbumPrice;
-            _protocolBalance += _protocolAlbumPrice;
-            IERC20(paymentToken).transferFrom(msg.sender, address(this), _albumPrice);
+            creatorBalance[collection] += _albumPrice - _protocolAlbumPrice;
+            _protocolBalance[collection] += _protocolAlbumPrice;
+            IERC20(paymentToken[collection]).transferFrom(msg.sender, address(this), _albumPrice);
         }
         address albumCreatedAddress = Clones.clone(albumTemplate);
         Album(albumCreatedAddress).initialize(msg.sender, collection);

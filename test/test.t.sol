@@ -15,8 +15,7 @@ import { TradingPit } from "../src/TradingPit.sol";
     currently this is not testing important stuff, only a reference of UX
     - add tests, security, integration, etc
     
-    - naming sucks.. 
-
+    - test different tokens
 */
 
 contract FiguritasTest is Test {
@@ -25,6 +24,7 @@ contract FiguritasTest is Test {
     Prizes public top;
     Factory public factory;
     ERC20PresetMinterPauser public paymentToken;
+    ERC20PresetMinterPauser public paymentToken2;
     TradingPit public tradingPit;
     Album public albumContract;
 
@@ -51,8 +51,12 @@ contract FiguritasTest is Test {
         bob = address(2);
 
         paymentToken = new ERC20PresetMinterPauser("Payment token", "PTOK");        
+        paymentToken2 = new ERC20PresetMinterPauser("Another Payment token", "APTOK");        
         paymentToken.mint(alice, 1*10**20);
         paymentToken.mint(bob, 1*10**20);
+        paymentToken2.mint(alice, 1*10**20);
+        paymentToken2.mint(bob, 1*10**20);
+
         paymentToken.mint(creator, 20*10**18);
         // launch factory (on admin's name)
         vm.startPrank(admin);
@@ -68,8 +72,8 @@ contract FiguritasTest is Test {
         factory.setPocketTemplate(address(pocket));
         factory.setAlbumTemplate(address(albumContract));
         factory.setPrizesTemplate(address(top));
-        factory.setPaymentToken(address(paymentToken));
         factory.setFee(fee);
+        factory.setAllowedToken(address(paymentToken), true);
         factory.setSubscriptionId(subscriptionId);
         
         vm.stopPrank();
@@ -87,7 +91,8 @@ contract FiguritasTest is Test {
         densityCurve[5] = 1;
 
         address collectionAddress = factory.createCollection(
-            2*10**18,
+            address(paymentToken),
+            2*10**18,      // albumPrice
             uri,
             densityCurve
         );
@@ -181,8 +186,8 @@ contract FiguritasTest is Test {
         album.stickFigus(ids);
         vm.stopPrank();
         vm.prank(admin);
-        //factory.withdrawProtocol(admin, address(collection));
-        //assertGt(paymentToken.balanceOf(admin), 0);
+        factory.protocolWithdraw(admin, address(collection));
+        assertGt(paymentToken.balanceOf(admin), 0);
     }
 
     function testTradingPit() public {

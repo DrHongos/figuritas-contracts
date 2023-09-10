@@ -13,10 +13,13 @@ import { Factory } from "./Factory.sol";
 /* 
     Make it more open, like an abstract contract with the functions claim() and neccessary storage to build upon
 
-    Make a fallback(?) fn in order to increase the prizes with external money
-    can be used to create prizes from figus sells
+    copy model of TradingPit to handle different assets protocols
 
-    Put prices in proportion and cancel out the winners (?)
+    Make a fallback(?) fn in order to increase the prizes with external money
+    can be used to create prizes from figus gains
+        - Put prices in proportion 
+        - cancel out the winners (?)
+
 
 */
 

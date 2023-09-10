@@ -13,14 +13,10 @@ On creation of FiguritasCollection will receive:
 
 TODO:
 - continue w/TTD
-    - Album: 
-        - migrate creation to cloning
-        - should be created in collection? of factory?
-
     - All the tests i havent done yet..
     
-    - fees & withdraw                   <<<
-        - sobresFactory 
+    - sobresFactory 
+        - fees & withdraw
             - min fee for sobre (LINK fees related)
     
     - TradingPit

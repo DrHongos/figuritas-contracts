@@ -20,11 +20,8 @@ contract Collection is
     uint8[] public densityCurveFigus;   // later private // limits total amount of figus to 256
     uint8 public numberFigus;           // limited to 255
 
-    address _factory;
-    address _creator;
-//    uint _creatorBalance;
-//    uint _protocolBalance;
-    uint public fee;
+    address public factory;
+    address public creator;
 
     Pocket public sobres;    
     Prizes public top;
@@ -33,24 +30,18 @@ contract Collection is
     uint _albumPrice;
     uint _protocolAlbumPrice;
 
-    mapping(address => address) public albums;
-
-    event AlbumPriceConfig(address indexed paymentToken, uint value);
-    event AlbumCreated(address indexed owner, address indexed album);
     event PackOpened(address indexed owner, uint id, uint[] ids);
 
     function initialize(
-        address creator,
+        address _creator,
         string memory uri, 
-        uint _fee,
         address _sobres,
         address _top,
         uint8[] memory _densityCurveFigus
     ) initializer public {
-        _factory = msg.sender;
+        factory = msg.sender;
         numberFigus = uint8(_densityCurveFigus.length);
-        fee = _fee;
-        _creator = creator;
+        creator = _creator;
         __ERC1155_init(uri);
         __Ownable_init();
         __ERC1155Supply_init();
@@ -61,7 +52,6 @@ contract Collection is
         // populate densityCurveFigus        
         densityCurveFigus.push(0);                      // discarded slot (because of normalization of VRF)
         for (uint i = 0; i < numberFigus; i++) {
-            // find a better way
             uint8 repetition = _densityCurveFigus[i];
             for (uint j=0; j < repetition; j++) {
                 densityCurveFigus.push(uint8(i));
@@ -69,30 +59,6 @@ contract Collection is
         }
     }
 
-/* 
-    function setAlbumPrice(address paymentToken, uint price) public {
-        require(msg.sender == _creator, "Only creator can set");
-        _paymentToken = paymentToken;
-        _albumPrice = price;
-        _protocolAlbumPrice = fee * price / 10000;
-        emit AlbumPriceConfig(paymentToken, price);
-    }
-    // Migrate this to use clones!
-    // maybe buy it from factory?
-    function getAlbum() public {
-        require(albums[msg.sender] == address(0), "Already owner of an album");
-        if (_albumPrice > 0) {
-            IERC20(_paymentToken).transferFrom(msg.sender, address(this), _albumPrice);
-            _creatorBalance += _albumPrice - _protocolAlbumPrice;
-            _protocolBalance += _protocolAlbumPrice;
-        }
-        // here
-        Album albumCreated = new Album(msg.sender, address(this));
-        address albumCreatedAddress = address(albumCreated);
-        albums[msg.sender] = albumCreatedAddress;
-        emit AlbumCreated(msg.sender, albumCreatedAddress);
-    }
- */
     function openPack(uint id) public nonReentrant() {
         require(sobres.ownerOf(id) == msg.sender, "Not owner of sobre");
         (uint amount, uint random) = sobres.getPackInformation(id);
@@ -109,19 +75,7 @@ contract Collection is
         _mintBatch(msg.sender, ids, amounts, "");
         emit PackOpened(msg.sender, id, ids);
     }
-/* 
-    function protocolWithdraw(address beneficiary) public onlyOwner() {
-        //require(msg.sender == factory, "Only factory can call");
-        IERC20(_paymentToken).transfer(beneficiary, _protocolBalance);
-        _protocolBalance = 0;
-    }
-
-    function creatorWithdraw(address beneficiary) public {
-        require(msg.sender == _creator, "Only creator can call");
-        IERC20(_paymentToken).transfer(beneficiary, _creatorBalance);
-        _creatorBalance = 0;
-    }
- */
+    
     // OVERRIDES
     function _beforeTokenTransfer(address operator, address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data)
         internal
