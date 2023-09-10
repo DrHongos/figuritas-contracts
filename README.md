@@ -14,11 +14,7 @@ On creation of FiguritasCollection will receive:
 TODO:
 - continue w/TTD
     - All the tests i havent done yet..
-    
-    - sobresFactory 
-        - fees & withdraw
-            - min fee for sobre (LINK fees related)
-    
+        
     - TradingPit
         (kind of free interpretation of required vs offered)
             implies a problem storing the multiple Item

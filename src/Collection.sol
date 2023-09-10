@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import { OwnableUpgradeable } from "../lib/openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
-import { ReentrancyGuard } from "../lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 import { ERC1155Upgradeable } from "../lib/openzeppelin-contracts-upgradeable/contracts/token/ERC1155/ERC1155Upgradeable.sol";
 import { ERC1155SupplyUpgradeable } from "../lib/openzeppelin-contracts-upgradeable/contracts/token/ERC1155/extensions/ERC1155SupplyUpgradeable.sol";
 import { Initializable } from "../lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
-import { IERC20 } from "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import { Pocket } from "./Pocket.sol";
 import { Album} from "./Album.sol";
 import { Prizes } from "./Prizes.sol";
@@ -14,9 +11,8 @@ import { Prizes } from "./Prizes.sol";
 contract Collection is 
     Initializable,
     ERC1155Upgradeable, 
-    ERC1155SupplyUpgradeable, 
-    OwnableUpgradeable, 
-    ReentrancyGuard {
+    ERC1155SupplyUpgradeable 
+{
     uint8[] public densityCurveFigus;   // later private // limits total amount of figus to 256
     uint8 public numberFigus;           // limited to 255
 
@@ -43,7 +39,6 @@ contract Collection is
         numberFigus = uint8(_densityCurveFigus.length);
         creator = _creator;
         __ERC1155_init(uri);
-        __Ownable_init();
         __ERC1155Supply_init();
 
         sobres = Pocket(_sobres);
@@ -59,8 +54,9 @@ contract Collection is
         }
     }
 
-    function openPack(uint id) public nonReentrant() {
+    function openPack(uint id) public {
         require(sobres.ownerOf(id) == msg.sender, "Not owner of sobre");
+        sobres.burn(id);
         (uint amount, uint random) = sobres.getPackInformation(id);
         
         uint256[] memory ids = new uint256[](amount);
@@ -70,8 +66,7 @@ contract Collection is
             uint index = (uint256(keccak256(abi.encode(random, i))) % (densityCurveFigus.length - 1)) + 1;
             ids[i] = densityCurveFigus[index];
             amounts[i] = 1;
-            }
-        sobres.burn(id);
+        }
         _mintBatch(msg.sender, ids, amounts, "");
         emit PackOpened(msg.sender, id, ids);
     }

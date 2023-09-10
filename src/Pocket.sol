@@ -6,8 +6,6 @@ import "../lib/openzeppelin-contracts-upgradeable/contracts/token/ERC721/extensi
 import "../lib/openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
 import "../lib/openzeppelin-contracts-upgradeable/contracts/utils/CountersUpgradeable.sol";
 import { Initializable } from "../lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
-import { IERC20 } from "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import { ReentrancyGuard } from "../lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 import { VRFConsumerBaseV2Upgradeable } from "./VRFConsumerBaseV2Upgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 
@@ -16,8 +14,7 @@ contract Pocket is
     ERC721Upgradeable, 
     ERC721BurnableUpgradeable, 
     OwnableUpgradeable, 
-    VRFConsumerBaseV2Upgradeable, 
-    ReentrancyGuard 
+    VRFConsumerBaseV2Upgradeable 
 {
     using CountersUpgradeable for CountersUpgradeable.Counter;
     address public admin;
@@ -95,7 +92,7 @@ contract Pocket is
 
     function requestRandomWords(address requester, uint amount, uint _config)
         public
-        onlyAdmin()
+        onlyOwner()
         returns (uint256 requestId)
     {
         configurations[_config].limit -= amount;
@@ -123,6 +120,7 @@ contract Pocket is
         uint _config
     )
     public 
+    onlyOwner()
     {
         // TESTS BYPASS OF VRF      //////////////////////////////////////
         uint[] memory randomWordsC = new uint[](amount);
@@ -174,11 +172,4 @@ contract Pocket is
         Pack memory dPack = packs[id];
         return (configurations[dPack.config].amount, dPack.random);
     }
-
-    function withdraw(address token) public {
-        // TODO
-        // return gains
-        // differentiate admin of fees/protocol
-    }
-
 }

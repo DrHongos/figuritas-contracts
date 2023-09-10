@@ -4,7 +4,6 @@ pragma solidity ^0.8.13;
 import "../lib/openzeppelin-contracts/contracts/utils/Counters.sol";
 import { Initializable } from "../lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 import { IERC20 } from "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import { OwnableUpgradeable } from "../lib/openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
 import { ReentrancyGuard } from "../lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 import { Collection } from "./Collection.sol";
 import { Album } from "./Album.sol";
@@ -23,7 +22,7 @@ import { Factory } from "./Factory.sol";
 
 */
 
-contract Prizes is Initializable, OwnableUpgradeable, ReentrancyGuard {
+contract Prizes is Initializable, ReentrancyGuard {
     using Counters for Counters.Counter;
     address public factory;
     Collection _collection;
