@@ -43,7 +43,7 @@ contract Album is Initializable, ERC1155HolderUpgradeable {
             ""
         );
         
-        // maybe move this to onERC1155BarchReceived()
+        // maybe move this to onERC1155BatchReceived()
         if (fullAlbumProof() == true) {
             completed = true;
         }

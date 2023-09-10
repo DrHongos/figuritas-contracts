@@ -112,7 +112,7 @@ contract FiguritasTest is Test {
 
     function configSale() public {
         vm.startPrank(creator);
-        sobres.configPack(3, 1*10**18, address(paymentToken),type(uint256).max);
+        sobres.configPack(3, 1*10**18, type(uint256).max);
         //collection.setAlbumPrice(address(paymentToken), 2*10**18);
         vm.stopPrank();
     }
@@ -154,8 +154,8 @@ contract FiguritasTest is Test {
         configCollection();
         configSale();
         vm.startPrank(alice);
-        paymentToken.approve(address(sobres), 10*10**18); 
-        sobres.buyPack(alice, 0, 10, 666);
+        paymentToken.approve(address(factory), 10*10**18); 
+        factory.buyPack(alice,address(collection), 0, 10, 666);
         sobres.setApprovalForAll(address(collection), true);
         collection.openPack(0);
         vm.expectRevert();
@@ -170,8 +170,8 @@ contract FiguritasTest is Test {
         configCollection();
         configSale();
         vm.startPrank(alice);
-        paymentToken.approve(address(sobres), 10*10**18); 
-        sobres.buyPack(alice, 0, 10, 666);
+        paymentToken.approve(address(factory), 10*10**18); 
+        factory.buyPack(alice, address(collection), 0, 10, 666);
         sobres.setApprovalForAll(address(collection), true);
         collection.openPack(0);
         // according to tests => ids = [1, 2, 3]
@@ -194,8 +194,8 @@ contract FiguritasTest is Test {
         configCollection();
         configSale();
         vm.startPrank(alice);
-        paymentToken.approve(address(sobres), 10*10**18); 
-        sobres.buyPack(alice, 0, 1, 666);
+        paymentToken.approve(address(factory), 10*10**18); 
+        factory.buyPack(alice, address(collection), 0, 1, 666);
         sobres.setApprovalForAll(address(collection), true);
         collection.openPack(0);
         // IDS: 1,2, 3 
@@ -222,8 +222,8 @@ contract FiguritasTest is Test {
         vm.stopPrank();
         
         vm.startPrank(bob);
-        paymentToken.approve(address(sobres), 10*10**18); 
-        sobres.buyPack(bob, 0, 1, 345);
+        paymentToken.approve(address(factory), 10*10**18); 
+        factory.buyPack(bob, address(collection), 0, 1, 345);
         sobres.setApprovalForAll(address(collection), true);
         collection.openPack(1);
         // IDS: 3,4,4 <<
@@ -244,8 +244,8 @@ contract FiguritasTest is Test {
         vm.startPrank(alice);
         paymentToken.approve(address(factory), 2*10**18);
         factory.getAlbum(address(collection));
-        paymentToken.approve(address(sobres), 10*10**18); 
-        sobres.buyPack(alice, 0, 2, 666);
+        paymentToken.approve(address(factory), 10*10**18); 
+        factory.buyPack(alice, address(collection), 0, 2, 666);
         sobres.setApprovalForAll(address(collection), true);
         collection.openPack(0);
         collection.openPack(1);
@@ -271,8 +271,8 @@ contract FiguritasTest is Test {
         vm.startPrank(bob);
         paymentToken.approve(address(factory), 2*10**18);
         factory.getAlbum(address(collection));
-        paymentToken.approve(address(sobres), 10*10**18); 
-        sobres.buyPack(bob, 0, 2, 666);
+        paymentToken.approve(address(factory), 10*10**18); 
+        factory.buyPack(bob, address(collection), 0, 2, 666);
         sobres.setApprovalForAll(address(collection), true);
         collection.openPack(2);
         collection.openPack(3);

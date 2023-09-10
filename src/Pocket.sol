@@ -11,12 +11,6 @@ import { ReentrancyGuard } from "../lib/openzeppelin-contracts/contracts/securit
 import { VRFConsumerBaseV2Upgradeable } from "./VRFConsumerBaseV2Upgradeable.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 
-/* 
-    Add withdraw mechanism
-    Add fee for LINK payment
-        - min fee (necessary)    
-*/
-
 contract Pocket is
     Initializable,
     ERC721Upgradeable, 
@@ -27,13 +21,14 @@ contract Pocket is
 {
     using CountersUpgradeable for CountersUpgradeable.Counter;
     address public admin;
+    uint public minPackPrice;
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "Only admin can call");
         _;
     }
 
-    event PackConfigured(uint amount, address paymentToken, uint price, uint limit);
+    event PackConfigured(uint amount, uint price, uint limit);
     event PackBought(address indexed owner, uint _type, uint amount);
 
     uint64 _subscriptionId;              // VRF subscription
@@ -47,7 +42,6 @@ contract Pocket is
     
     struct PackConfig {
         uint amount;            // how many figus this sobre contains
-        address paymentToken;   // how is it payed
         uint price;             // how much it cost (in payment token)
         uint limit;             // limited qty (use MAX for ilimited)
     }
@@ -73,6 +67,7 @@ contract Pocket is
     mapping(uint => Request) public requests;
 
     function initialize(
+        uint _minPackPrice,
         address _admin,
         uint64 subscriptionId
     ) initializer public {
@@ -80,55 +75,30 @@ contract Pocket is
         __ERC721Burnable_init();
         __Ownable_init();
         admin = _admin;
+        minPackPrice = _minPackPrice;
         _subscriptionId = subscriptionId;
         __VRFConsumerBaseV2Upgradeable_init(_coordinatorAddress);
         _coordinator = VRFCoordinatorV2Interface(_coordinatorAddress); 
     }
 
-    function configPack(uint amount, uint price, address paymentToken, uint limit) public onlyAdmin() {
+    function configPack(uint amount, uint price, uint limit) public onlyAdmin() {
+        require(price >= minPackPrice, "Price invalid");
         uint _configCounter = configCounter.current();        
         configurations[_configCounter] = PackConfig (
             amount,
-            paymentToken,
             price,
             limit   
         );
         configCounter.increment();
-        emit PackConfigured(amount, paymentToken, price, limit);
+        emit PackConfigured(amount, price, limit);
     } 
-
-    function buyPack(address beneficiary, uint _config, uint amount, uint fakeRandom) public nonReentrant() {
-        PackConfig storage config = configurations[_config];
-        require(config.limit > amount, "Not enough in sale!");
-        config.limit -= amount;
-
-        uint totalValue = amount * config.price;
-        // TODO: handle balance and fees!
-        IERC20(config.paymentToken).transferFrom(msg.sender, address(this), totalValue);
-        // requestRandomWords(beneficiary, amount, _config);
-        
-        // TESTS BYPASS OF VRF      //////////////////////////////////////
-        requests[fakeRandom] = Request({
-            randomWords: new uint[](0),
-            exists: true,
-            beneficiary: beneficiary,
-            config: _config,
-            fulfilled: false
-        });
-        uint[] memory randomWordsC = new uint[](amount);
-        for (uint i = 0; i < amount; i++) {
-            randomWordsC[i] = uint256(keccak256(abi.encode(fakeRandom, i)));
-        }
-        _fakeFulfillRandomWords(fakeRandom, randomWordsC);
-        ///////////////////////////////////////////////////////////////////
-
-        emit PackBought(beneficiary, _config, amount);
-    }
 
     function requestRandomWords(address requester, uint amount, uint _config)
         public
+        onlyAdmin()
         returns (uint256 requestId)
     {
+        configurations[_config].limit -= amount;
         requestId = _coordinator.requestRandomWords(
             _keyHash,
             _subscriptionId,
@@ -146,26 +116,38 @@ contract Pocket is
         return requestId;
     }
     
-    function _fakeFulfillRandomWords(
-        uint256 _requestId,
-        uint256[] memory _randomWords
+    function fakeFulfillRandomWords(
+        uint256 fakeRandom,
+        uint amount,
+        address beneficiary,
+        uint _config
     )
-    internal 
+    public 
     {
-        Request storage request = requests[_requestId];
-        require(request.exists, "request not found");
-        request.fulfilled = true;        
+        // TESTS BYPASS OF VRF      //////////////////////////////////////
+        uint[] memory randomWordsC = new uint[](amount);
+        for (uint i = 0; i < amount; i++) {
+            randomWordsC[i] = uint256(keccak256(abi.encode(fakeRandom, i)));
+        }
+        requests[fakeRandom] = Request({
+            randomWords: randomWordsC,
+            exists: true,
+            beneficiary: beneficiary,
+            config: _config,
+            fulfilled: true
+        });
 
-        for (uint i = 0; i < _randomWords.length; i++) {
+        for (uint i = 0; i < randomWordsC.length; i++) {
             uint256 tokenId = _tokenIdCounter.current();
             packs[tokenId] = Pack (
-                request.config,
-                _randomWords[i]
+                _config,
+                randomWordsC[i]
             );
             _tokenIdCounter.increment();
-            _safeMint(request.beneficiary, tokenId);
+            _safeMint(beneficiary, tokenId);
         }
     }    
+
     // @ignore
     function fulfillRandomWords(
         uint256 _requestId,

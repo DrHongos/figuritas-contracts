@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import "../lib/openzeppelin-contracts/contracts/proxy/Clones.sol";
 import "../lib/openzeppelin-contracts/contracts/utils/Counters.sol";
+import { ReentrancyGuard } from "../lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 import { AccessControl } from "../lib/openzeppelin-contracts/contracts/access/AccessControl.sol";
 import { IERC20 } from "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import { Collection } from "./Collection.sol";
@@ -15,12 +16,24 @@ Highly experimental and quickly done
 
 */
 
-contract Factory is AccessControl {
+
+/* 
+    Pack fees
+To do this, i need to know:
+    - cost of VRF service
+    - Price of LINK
+
+    OR, easy peasy, subject to a minimum (according to token) known as upper limit + x%
+
+*/
+
+contract Factory is AccessControl, ReentrancyGuard {
     using Counters for Counters.Counter;
     bytes32 public constant ADMIN = keccak256("ADMIN");
 
     uint public fee;
     uint64 _subscriptionId;
+    uint public minPackPrice = 1*10**17;       // CAREFUL! this is token dependent
 
     mapping(address => bool) public allowedTokens;
     mapping(address => address) public paymentToken;
@@ -40,6 +53,7 @@ contract Factory is AccessControl {
 
     event NewCollection(uint index, address creator, address paymentToken, address collection, address prizes, address packs);
     event AlbumCreated(address indexed owner, address indexed album);
+    event PackBought(address indexed owner, address indexed collection, uint _type, uint amount);
 
     constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -54,11 +68,7 @@ contract Factory is AccessControl {
     function setSubscriptionId(uint64 subscriptionId) public onlyRole(ADMIN) {
         _subscriptionId = subscriptionId;
     }
-/* 
-    function withdrawProtocol(address beneficiary, address collection) public onlyRole(ADMIN) {
-        Collection(collection).protocolWithdraw(beneficiary);
-    }
- */
+
     function withdrawSobres(address beneficiary, address collection) public onlyRole(ADMIN) {
         // TODO
     }
@@ -101,7 +111,7 @@ contract Factory is AccessControl {
         index.increment();
         address creator = msg.sender;
         address nPocket = Clones.clone(pocketTemplate);
-        Pocket(nPocket).initialize(creator, _subscriptionId);
+        Pocket(nPocket).initialize(minPackPrice, creator,  _subscriptionId);
         address nCollectionAddress = Clones.clone(collectionTemplate);
         address nPrizesAddress = Clones.clone(prizesTemplate);
         Prizes(nPrizesAddress).initialize(nCollectionAddress);
@@ -119,7 +129,7 @@ contract Factory is AccessControl {
         return nCollectionAddress;
     }
  
-    function getAlbum(address collection) public {
+    function getAlbum(address collection) public nonReentrant() {
         require(albums[collection][msg.sender] == address(0), "Already owner of an album");
         uint _albumPrice = albumPrice[collection];
         if (_albumPrice > 0) {
@@ -132,6 +142,25 @@ contract Factory is AccessControl {
         Album(albumCreatedAddress).initialize(msg.sender, collection);
         albums[collection][msg.sender] = albumCreatedAddress;
         emit AlbumCreated(msg.sender, albumCreatedAddress);
+    }
+
+
+    function buyPack(address beneficiary, address collection, uint _config, uint amount, uint fakeRandom) public nonReentrant() {
+        Pocket pkt = Pocket(Collection(collection).sobres()); 
+        (, uint price, uint limit) = pkt.configurations(_config);
+        require(limit > amount, "Not enough in sale!");
+
+        uint totalValue = amount * price;
+
+        uint _protocolPackPrice = price * fee / 10000;
+        creatorBalance[collection] += price - _protocolPackPrice;
+        _protocolBalance[collection] += _protocolPackPrice;
+        IERC20(paymentToken[collection]).transferFrom(msg.sender, address(this), totalValue);
+        
+        // _requestRandomWords(beneficiary, amount, _config);                   // real
+        pkt.fakeFulfillRandomWords(fakeRandom, amount, beneficiary, _config);   // bypass
+
+        emit PackBought(beneficiary, collection, _config, amount);
     }
 
 }
