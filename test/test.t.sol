@@ -101,7 +101,7 @@ contract FiguritasTest is Test {
 
         collection = Collection(collectionAddress);
         pocket = collection.pocket();
-        prizes = collection.prizes();
+        prizes = Prizes(factory.prizes(address(collection)));//collection.prizes();
         vm.stopPrank();
     }
     function getRepeatedAddress(address to, uint amo) public pure returns(address[] memory) {
@@ -112,6 +112,13 @@ contract FiguritasTest is Test {
         return res;
     }
 
+    function getRepeatedUint(uint to, uint amo) public pure returns(uint[] memory) {
+        uint[] memory res = new uint[](amo);
+        for (uint i = 0; i < amo; i++) {
+            res[i] = to;
+        }
+        return res;
+    }
     function configSale(uint amount, uint prize, uint limit) public {
         uint limitP;
         if (limit == 0) {
@@ -148,10 +155,10 @@ contract FiguritasTest is Test {
 
     function testCreation() public {
         configCollection(albumPrice);
-        uint8 testRandomSelect = collection.densityCurveFigus(4);        
-        uint8 testLast = collection.densityCurveFigus(31); 
-        assertEq(testRandomSelect, 1);
-        assertEq(testLast, 5);
+//        uint8 testRandomSelect = collection.densityCurveFigus(4);        
+//        uint8 testLast = collection.densityCurveFigus(31); 
+//        assertEq(testRandomSelect, 1);
+//        assertEq(testLast, 5);
         assertEq(collection.uri(0), uri);
         
 //        assertEq(address(collection.paymentsToken()), address(paymentToken));
@@ -207,8 +214,10 @@ contract FiguritasTest is Test {
         vm.startPrank(bob);
         uint[] memory idsB = new uint[](1);
         collection.setApprovalForAll(address(album), true);
-        vm.expectRevert();
-        album.stickFigus(idsB);
+        vm.expectRevert();                  // bob cannot stick figu
+        album.stickFigus(idsB);             
+        // actually he can.. transferring the token to the album
+        collection.safeTransferFrom(bob, address(album), 4, 1, "");
         vm.stopPrank();
         vm.prank(admin);
         uint protocolGains = (2+10)*10**18 * fee / 10000;
@@ -268,6 +277,11 @@ contract FiguritasTest is Test {
         configSale(3, packPrice, 0);
         configIncentives();
     
+        vm.startPrank(bob);
+        paymentToken.approve(address(factory), 2*10**18);
+        factory.getAlbum(address(collection));
+        vm.stopPrank();
+
         vm.startPrank(alice);
         paymentToken.approve(address(factory), 2*packPrice + albumPrice);
         factory.getAlbum(address(collection));
@@ -291,22 +305,21 @@ contract FiguritasTest is Test {
         album.stickFigus(allIds);
         // claim!
         prizes.claim();        
-        vm.stopPrank();
-       
-        vm.startPrank(bob);
-        paymentToken.approve(address(factory), 2*10**18);
-        factory.getAlbum(address(collection));
+        //vm.expectRevert();        it does not revert, simply returns amounts = 0
+        album.unstickFigus(alice, allIds);                
+
         paymentToken.approve(address(factory), 10*10**18); 
-        factory.buyPack(bob, address(collection), 0, 2, 666);
-        pocket.setApprovalForAll(address(collection), true);
+        factory.buyPack(alice, address(collection), 0, 2, 666);
         collection.openPack(2);
         collection.openPack(3);
-    
-        Album albumBob = Album(factory.albums(address(collection), bob));
-        collection.setApprovalForAll(address(albumBob), true);
-        albumBob.stickFigus(allIds);
-        prizes.claim();        
+        address albumBob = factory.albums(address(collection), bob);
+        uint[] memory amounts = getRepeatedUint(1, 6);
+        collection.safeBatchTransferFrom(alice, albumBob, allIds, amounts, "");
         vm.stopPrank();
+       
+        vm.prank(bob);
+        prizes.claim();
+
     }
 
     // TO BE CONTINUED

@@ -51,6 +51,8 @@ contract Factory is AccessControl, ReentrancyGuard {
     mapping(address => uint) public albumPrice;
     mapping(address => mapping(address => address)) public albums;
 
+    mapping(address => address) public prizes;
+
     event NewCollection(uint index, address creator, address paymentToken, address collection, address prizes, address packs);
     event AlbumCreated(address indexed owner, address indexed album);
     event PackBought(address indexed owner, address indexed collection, uint _type, uint amount);
@@ -115,12 +117,13 @@ contract Factory is AccessControl, ReentrancyGuard {
         address nCollectionAddress = Clones.clone(collectionTemplate);
         address nPrizesAddress = Clones.clone(prizesTemplate);
         Prizes(nPrizesAddress).initialize(nCollectionAddress);
+        prizes[nCollectionAddress] = nPrizesAddress;
         albumPrice[nCollectionAddress] = _albumPrice;
         Collection(nCollectionAddress).initialize(
             creator, 
             uri, 
             nPocket,
-            nPrizesAddress,
+//            nPrizesAddress,
             _densityCurveFigus 
         );
         paymentToken[nCollectionAddress] = _paymentToken;

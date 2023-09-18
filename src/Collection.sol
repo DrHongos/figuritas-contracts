@@ -5,26 +5,20 @@ import { ERC1155Upgradeable } from "../lib/openzeppelin-contracts-upgradeable/co
 import { ERC1155SupplyUpgradeable } from "../lib/openzeppelin-contracts-upgradeable/contracts/token/ERC1155/extensions/ERC1155SupplyUpgradeable.sol";
 import { Initializable } from "../lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 import { Pocket } from "./Pocket.sol";
+import { Factory } from "./Factory.sol";
 import { Album} from "./Album.sol";
-import { Prizes } from "./Prizes.sol";
 
 contract Collection is 
     Initializable,
     ERC1155Upgradeable, 
     ERC1155SupplyUpgradeable 
 {
-    uint8[] public densityCurveFigus;   // later private // limits total amount of figus to 256
+    uint8[] densityCurveFigus;
     uint8 public numberFigus;           // limited to 255
 
     address public factory;
     address public creator;
-
     Pocket public pocket;    
-    Prizes public prizes;
-
-    address _paymentToken;
-    uint _albumPrice;
-    uint _protocolAlbumPrice;
 
     event PackOpened(address indexed owner, uint id, uint[] ids);
 
@@ -32,7 +26,6 @@ contract Collection is
         address _creator,
         string memory uri, 
         address _pocket,
-        address _prizes,
         uint8[] memory _densityCurveFigus
     ) initializer public {
         factory = msg.sender;
@@ -42,7 +35,6 @@ contract Collection is
         __ERC1155Supply_init();
 
         pocket = Pocket(_pocket);
-        prizes = Prizes(_prizes);
         
         // populate densityCurveFigus        
         densityCurveFigus.push(0);                      // discarded slot (because of normalization of VRF)

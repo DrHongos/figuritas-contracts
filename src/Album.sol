@@ -8,10 +8,11 @@ import { Collection } from "./Collection.sol";
 contract Album is Initializable, ERC1155HolderUpgradeable {
     Collection _collection;
     bool public completed;
+    uint public figusLength;
     address public collector;
 
     event FiguSticked(uint[] id);
-    event FiguUnsticked(uint[] id);
+    event FiguUnsticked(uint[] id, uint[] amounts);
 
     modifier onlyOwner() {
         require(msg.sender == collector, "Only owner of album");
@@ -21,6 +22,7 @@ contract Album is Initializable, ERC1155HolderUpgradeable {
     function initialize(address _collector, address collection) initializer() public {
         collector = _collector;
         _collection = Collection(collection);
+        figusLength = _collection.numberFigus();
     } 
 
     function stickFigus(uint[] calldata ids) public onlyOwner() {
@@ -52,20 +54,27 @@ contract Album is Initializable, ERC1155HolderUpgradeable {
     }        
 
     function unstickFigus(address to, uint[] memory ids) public onlyOwner() {
-        require(completed == false, "Album completed!");
         uint length = ids.length;
-        uint256[] memory amounts = new uint256[](length);
+        address[] memory arr = new address[](length);
         for (uint256 i = 0; i < length; i++) {
-            amounts[i] = 1;
+            arr[i] = address(this);
+        }
+        uint[] memory balances = _collection.balanceOfBatch(arr, ids);
+        uint[] memory amounts = new uint256[](length);
+        for (uint256 i = 0; i < length; i++) {
+            if (completed && balances[i] <= 1) {
+                amounts[i] = 0;
+            } else {
+                amounts[i] = 1;
+            }
         }
         _collection.safeBatchTransferFrom(
             address(this), to, ids, amounts, ""
         );
-        emit FiguUnsticked(ids);
+        emit FiguUnsticked(ids, amounts);
     }
 
     function fullAlbumProof() public view returns (bool) {
-        uint figusLength = _collection.numberFigus();
         for (uint i = 0; i < figusLength; i++) {
             if (_collection.balanceOf(address(this), i) == 0) {
                 return false;
